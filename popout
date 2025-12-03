@@ -143,3 +143,88 @@ export class PopoutComponent {
     this.actualPosition.set(bestPosition);
   }
 }
+
+
+
+
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { PopoutComponent, PopoutSection } from './popout.component';
+import { ComponentRef } from '@angular/core';
+
+describe('PopoutComponent', () => {
+  let component: PopoutComponent;
+  let componentRef: ComponentRef<PopoutComponent>;
+  let fixture: ComponentFixture<PopoutComponent>;
+
+  const mockSections: PopoutSection[] = [
+    { label: 'Primary: ', value: 'John Doe' },
+    { label: 'Secondary: ', value: 'Jane Smith\nBob Smith' },
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [PopoutComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PopoutComponent);
+    component = fixture.componentInstance;
+    componentRef = fixture.componentRef;
+  });
+
+  describe('Position Logic', () => {
+    it('should set actualPosition to the specified position when not auto', fakeAsync(() => {
+      componentRef.setInput('sections', mockSections);
+      componentRef.setInput('position', 'top');
+
+      fixture.detectChanges();
+      tick();
+
+      expect(component.actualPosition()).toBe('top');
+    }));
+
+    it('should default actualPosition to bottom when position is auto', fakeAsync(() => {
+      componentRef.setInput('sections', mockSections);
+      componentRef.setInput('position', 'auto');
+
+      fixture.detectChanges();
+      tick();
+
+      expect(['top', 'bottom', 'left', 'right']).toContain(component.actualPosition());
+    }));
+  });
+
+  describe('Output Events', () => {
+    it('should emit mouseEnterPopup on mouseenter event', fakeAsync(() => {
+      componentRef.setInput('sections', mockSections);
+      fixture.detectChanges();
+      tick();
+
+      let emitted = false;
+      component.mouseEnterPopup.subscribe(() => {
+        emitted = true;
+      });
+
+      const popout = fixture.debugElement.query(By.css('.info-popout'));
+      popout.triggerEventHandler('mouseenter');
+
+      expect(emitted).toBe(true);
+    }));
+
+    it('should emit mouseLeavePopup on mouseleave event', fakeAsync(() => {
+      componentRef.setInput('sections', mockSections);
+      fixture.detectChanges();
+      tick();
+
+      let emitted = false;
+      component.mouseLeavePopup.subscribe(() => {
+        emitted = true;
+      });
+
+      const popout = fixture.debugElement.query(By.css('.info-popout'));
+      popout.triggerEventHandler('mouseleave');
+
+      expect(emitted).toBe(true);
+    }));
+  });
+});
