@@ -1,0 +1,145 @@
+import { Component, input, output, ElementRef, inject, signal, afterNextRender } from '@angular/core';
+
+export interface PopoutSection {
+  label: string;
+  value: string;
+}
+
+export type PopoutPosition = 'top' | 'bottom' | 'left' | 'right' | 'auto';
+
+@Component({
+  selector: 'app-popout',
+  standalone: true,
+  template: `
+    <div class="popout-wrapper">
+      <div 
+        class="info-popout" 
+        [class]="'position-' + actualPosition()"
+        (mouseenter)="mouseEnterPopup.emit()"
+        (mouseleave)="mouseLeavePopup.emit()">
+        @for (section of sections(); track section.label) {
+          <div class="info-section">
+            <span class="info-label">{{ section.label }}</span>
+            <span class="info-value">{{ section.value }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  `,
+  styles: `
+    .popout-wrapper {
+      position: relative;
+      display: block;
+    }
+
+    .info-popout {
+      position: absolute;
+      z-index: 1000;
+      min-width: 200px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .position-bottom {
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 8px;
+    }
+
+    .position-top {
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 8px;
+    }
+
+    .position-left {
+      right: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-right: 8px;
+    }
+
+    .position-right {
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: 8px;
+    }
+
+    .info-section {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .info-label {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #333;
+    }
+
+    .info-value {
+      color: #666;
+      white-space: pre-line;
+      line-height: 1.5;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+  `
+})
+export class PopoutComponent {
+  private readonly elementRef = inject(ElementRef);
+
+  sections = input.required<PopoutSection[]>();
+  position = input<PopoutPosition>('auto');
+
+  mouseLeavePopup = output<void>();
+  mouseEnterPopup = output<void>();
+
+  actualPosition = signal<Exclude<PopoutPosition, 'auto'>>('bottom');
+
+  constructor() {
+    afterNextRender(() => {
+      this.calculatePosition();
+    });
+  }
+
+  private calculatePosition(): void {
+    if (this.position() !== 'auto') {
+      this.actualPosition.set(this.position() as Exclude<PopoutPosition, 'auto'>);
+      return;
+    }
+
+    const wrapper = this.elementRef.nativeElement.querySelector('.popout-wrapper') as HTMLElement;
+    const rect = wrapper.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const spaceTop = rect.top;
+    const spaceBottom = viewportHeight - rect.bottom;
+    const spaceLeft = rect.left;
+    const spaceRight = viewportWidth - rect.right;
+
+    const spaces = {
+      bottom: spaceBottom,
+      top: spaceTop,
+      right: spaceRight,
+      left: spaceLeft
+    };
+
+    const bestPosition = (Object.entries(spaces) as [Exclude<PopoutPosition, 'auto'>, number][])
+      .sort((a, b) => b[1] - a[1])[0][0];
+
+    this.actualPosition.set(bestPosition);
+  }
+}
